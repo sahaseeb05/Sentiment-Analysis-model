@@ -1,0 +1,278 @@
+# ============================================================
+#   Sentiment Analysis of Product Reviews
+#   Natural Language Processing Project - Python
+# ============================================================
+
+# ── Imports ──────────────────────────────────────────────────
+import pandas as pd
+import numpy as np
+import re
+
+from sklearn.feature_extraction.text import (
+    CountVectorizer, TfidfVectorizer, ENGLISH_STOP_WORDS
+)
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+
+
+# ============================================================
+# STEP 1 — DATA COLLECTION
+# ============================================================
+# We use a manually created dataset of product reviews.
+# Each review has a label: Positive, Negative, or Neutral.
+
+data = {
+    "Review": [
+        # ── Positive (25 reviews) ──────────────────────────────
+        "This product is amazing and very useful",
+        "Absolutely love it! Best purchase I ever made",
+        "Great quality and fast delivery, highly recommend",
+        "Excellent product, works perfectly as described",
+        "Very happy with this purchase, will buy again",
+        "Outstanding quality and fantastic value for money",
+        "Super comfortable and durable, 5 stars",
+        "The product exceeded my expectations completely",
+        "Brilliant item, works like a charm every time",
+        "Really impressed with the build quality and design",
+        "Perfect product, exactly what I was looking for",
+        "Wonderful experience, the product is top notch",
+        "Best product in this price range, love it",
+        "Incredibly well made, very satisfied with quality",
+        "Fantastic purchase, works great and looks good",
+        "Amazing value, would definitely recommend to friends",
+        "Superb craftsmanship and excellent packaging",
+        "Very pleased with product, delivery was quick too",
+        "Highly recommend, product is just as advertised",
+        "Brilliant quality and great customer service",
+        "Love everything about this product, simply perfect",
+        "Five stars, absolutely worth every penny spent",
+        "Wonderful product that delivers on every promise",
+        "Exceptional quality at a very reasonable price",
+        "Delighted with this purchase, works flawlessly",
+
+        # ── Negative (25 reviews) ──────────────────────────────
+        "Very poor quality and complete waste of money",
+        "Terrible product, stopped working after one day",
+        "Worst purchase ever, totally disappointed",
+        "Absolutely horrible, do not buy this product",
+        "Broke after first use, very disappointed",
+        "Defective item, poor customer service as well",
+        "Cheap material, fell apart immediately after opening",
+        "Does not work as advertised, total scam",
+        "Extremely unhappy with this product, avoid",
+        "Returned it immediately, complete garbage",
+        "Pathetic quality, not worth a single penny",
+        "Waste of money, broke within a week of use",
+        "Terrible experience, product is completely useless",
+        "Disgusting quality, will never buy again",
+        "False advertising, nothing like shown in pictures",
+        "Do not buy, completely broken out of the box",
+        "Awful product, worst I have ever purchased",
+        "Total waste, very cheap and poorly constructed",
+        "Horrible purchase, broke immediately and unreliable",
+        "Zero stars, useless product with bad quality",
+        "Disappointed and frustrated, not recommended at all",
+        "Very bad experience, product stopped working quickly",
+        "Rubbish product, money completely wasted here",
+        "Terrible build quality, fell apart on first day",
+        "Dreadful product, avoid at all costs please",
+
+        # ── Neutral (25 reviews) ───────────────────────────────
+        "Product is okay, not bad but not great either",
+        "It works fine for the price, average quality",
+        "Nothing special, does the job though",
+        "Decent product, meets basic expectations",
+        "Average quality, not too impressed but acceptable",
+        "It is what it is, nothing more nothing less",
+        "Ordinary product, works as expected so far",
+        "Mediocre performance, neither good nor bad",
+        "Acceptable for the price range offered",
+        "Standard product, no surprises at all",
+        "Works okay, nothing to write home about",
+        "Reasonable quality for the price paid",
+        "Does what it says, no more no less",
+        "Average product, serves its purpose adequately",
+        "Not bad, not great, just an ordinary item",
+        "Satisfactory product, meets minimum requirements",
+        "Works fine but nothing impressive about it",
+        "Moderate quality, price is fair enough",
+        "Typical product, average in every way",
+        "It functions properly but is nothing special",
+        "Adequate for basic use, nothing extraordinary",
+        "Middle of the road product, gets the job done",
+        "Fair product, neither impressive nor disappointing",
+        "Just okay, expected better but works fine",
+        "Neutral experience, product is plain and simple",
+    ],
+    "Sentiment": (
+        ["Positive"] * 25 +
+        ["Negative"] * 25 +
+        ["Neutral"]  * 25
+    )
+}
+
+df = pd.DataFrame(data)
+
+print("=" * 60)
+print("STEP 1 — DATASET OVERVIEW")
+print("=" * 60)
+print(f"Total reviews : {len(df)}")
+print(f"Class balance :\n{df['Sentiment'].value_counts()}")
+print("\nSample rows:")
+print(df.head(6).to_string(index=False))
+
+
+# ============================================================
+# STEP 2 — TEXT PREPROCESSING
+# ============================================================
+
+stop_words = ENGLISH_STOP_WORDS  # sklearn's built-in English stopwords
+
+def preprocess(text):
+    """
+    Full preprocessing pipeline:
+      1. Lowercase
+      2. Remove punctuation & numbers
+      3. Tokenize (simple whitespace split)
+      4. Remove stopwords
+    Note: sklearn's TF-IDF vectorizer handles stemming internally
+    via its analyzer. We do manual preprocessing here for clarity.
+    """
+    # 1. Lowercase
+    text = text.lower()
+
+    # 2. Remove punctuation and digits
+    text = re.sub(r'[^a-z\s]', '', text)
+
+    # 3. Tokenize (split on whitespace)
+    tokens = text.split()
+
+    # 4. Remove stopwords
+    tokens = [t for t in tokens if t not in stop_words]
+
+    return " ".join(tokens)
+
+df['Cleaned_Review'] = df['Review'].apply(preprocess)
+
+print("\n" + "=" * 60)
+print("STEP 2 — TEXT PREPROCESSING")
+print("=" * 60)
+print("Steps applied: lowercase → remove punctuation → tokenize → remove stopwords")
+print("\nOriginal  →  Cleaned (first 5 rows):\n")
+for _, row in df.head(5).iterrows():
+    print(f"  Original : {row['Review']}")
+    print(f"  Cleaned  : {row['Cleaned_Review']}\n")
+
+
+# ============================================================
+# STEP 3 — FEATURE EXTRACTION
+# ============================================================
+
+X = df['Cleaned_Review']
+y = df['Sentiment']
+
+# Split before vectorizing to avoid data leakage
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+print("=" * 60)
+print("STEP 3 — FEATURE EXTRACTION")
+print("=" * 60)
+
+# ── 3a. Bag of Words ─────────────────────────────────────────
+bow_vectorizer = CountVectorizer()
+X_train_bow    = bow_vectorizer.fit_transform(X_train)
+X_test_bow     = bow_vectorizer.transform(X_test)
+
+print(f"Bag of Words matrix shape  : {X_train_bow.shape}")
+print(f"  (rows=train reviews, cols=unique words)")
+
+# ── 3b. TF-IDF ───────────────────────────────────────────────
+tfidf_vectorizer = TfidfVectorizer()
+X_train_tfidf    = tfidf_vectorizer.fit_transform(X_train)
+X_test_tfidf     = tfidf_vectorizer.transform(X_test)
+
+print(f"TF-IDF matrix shape        : {X_train_tfidf.shape}")
+
+
+# ============================================================
+# STEP 4 — MODEL TRAINING
+# ============================================================
+
+print("\n" + "=" * 60)
+print("STEP 4 — MODEL TRAINING (Logistic Regression)")
+print("=" * 60)
+
+# ── Train on BoW features ────────────────────────────────────
+model_bow = LogisticRegression(max_iter=1000, random_state=42)
+model_bow.fit(X_train_bow, y_train)
+print("Logistic Regression trained on Bag-of-Words features ✓")
+
+# ── Train on TF-IDF features ─────────────────────────────────
+model_tfidf = LogisticRegression(max_iter=1000, random_state=42)
+model_tfidf.fit(X_train_tfidf, y_train)
+print("Logistic Regression trained on TF-IDF features       ✓")
+
+
+# ============================================================
+# STEP 5 — MODEL EVALUATION
+# ============================================================
+
+print("\n" + "=" * 60)
+print("STEP 5 — MODEL EVALUATION")
+print("=" * 60)
+
+# ── BoW Results ──────────────────────────────────────────────
+y_pred_bow = model_bow.predict(X_test_bow)
+acc_bow    = accuracy_score(y_test, y_pred_bow)
+
+print(f"\n--- Bag-of-Words Model ---")
+print(f"Accuracy : {acc_bow * 100:.1f}%")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_bow, target_names=['Negative', 'Neutral', 'Positive']))
+
+# ── TF-IDF Results ───────────────────────────────────────────
+y_pred_tfidf = model_tfidf.predict(X_test_tfidf)
+acc_tfidf    = accuracy_score(y_test, y_pred_tfidf)
+
+print(f"\n--- TF-IDF Model ---")
+print(f"Accuracy : {acc_tfidf * 100:.1f}%")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_tfidf, target_names=['Negative', 'Neutral', 'Positive']))
+
+# ── Best Model Summary ───────────────────────────────────────
+best = "TF-IDF" if acc_tfidf >= acc_bow else "Bag-of-Words"
+print(f"Best performing model: {best}")
+
+
+# ============================================================
+# STEP 6 — PREDICT ON NEW REVIEWS
+# ============================================================
+
+print("\n" + "=" * 60)
+print("STEP 6 — PREDICT NEW REVIEWS (using best model)")
+print("=" * 60)
+
+new_reviews = [
+    "This is the best product I have ever bought!",
+    "Completely useless, broke on the first day",
+    "It is fine, nothing special about it",
+    "Fantastic quality and very fast shipping",
+    "Disappointed with the overall build quality",
+]
+
+# Preprocess, vectorize, predict
+cleaned_new    = [preprocess(r) for r in new_reviews]
+vectorized_new = tfidf_vectorizer.transform(cleaned_new)
+predictions    = model_tfidf.predict(vectorized_new)
+
+print(f"\n{'Review':<48} {'Predicted Sentiment'}")
+print("-" * 70)
+for review, pred in zip(new_reviews, predictions):
+    print(f"{review:<48} {pred}")
+
+print("\n" + "=" * 60)
+print("PROJECT COMPLETE")
+print("=" * 60)
