@@ -1,0 +1,213 @@
+# Sentiment Analysis of Product Reviews using NLP
+
+![Python](https://img.shields.io/badge/Python-3.x-blue) ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-green) ![NLP](https://img.shields.io/badge/NLP-sentiment-purple) ![Status](https://img.shields.io/badge/status-academic%20project-lightgrey)
+
+A complete Natural Language Processing (NLP) project that automatically classifies product reviews as **Positive**, **Negative**, or **Neutral** using classical machine learning techniques in Python. This project covers the entire pipeline from raw text collection to model evaluation — making it a solid beginner-to-intermediate level demonstration of applied NLP and text classification.
+
+> Built as part of an Artificial Intelligence course project in the Computer Science department. Every step of the NLP pipeline is implemented from scratch using industry-standard Python libraries.
+
+---
+
+## What is Sentiment Analysis?
+
+Sentiment analysis — also called opinion mining — is the process of using computer algorithms to automatically determine the emotional tone behind a piece of text. It is one of the most widely used applications of Natural Language Processing in the real world.
+
+Every day, millions of customers leave product reviews on platforms like Amazon, Daraz, and eBay. Reading all of them manually is impossible. Sentiment analysis solves this by letting a machine read thousands of reviews in seconds and instantly tell a business how their customers feel. Companies use this technology to track product quality, identify problems early, compare competitor feedback, and make data-driven decisions.
+
+In this project, we build a sentiment classifier that takes any product review as input and outputs one of three labels: Positive, Negative, or Neutral.
+
+---
+
+## Project Objectives
+
+- Understand and implement core Natural Language Processing concepts
+- Build a full text preprocessing pipeline to clean raw review data
+- Extract numerical features from text using Bag of Words and TF-IDF
+- Train a Logistic Regression classifier on the processed features
+- Evaluate the model using industry-standard classification metrics
+- Use the trained model to predict sentiment on brand new, unseen reviews
+
+---
+
+## Tech Stack
+
+| Library | Version | Purpose |
+|---|---|---|
+| `Python` | 3.x | Core programming language |
+| `scikit-learn` | Latest | ML model, vectorizers, metrics, train/test split |
+| `pandas` | Latest | Dataset creation and management |
+| `numpy` | Latest | Numerical array operations |
+| `re` | Built-in | Regular expressions for text cleaning |
+
+---
+
+## Project Structure
+
+```
+sentiment-analysis-nlp/
+├── sentiment_analysis.py   # Complete NLP pipeline (main script)
+├── README.md               # Project documentation
+└── requirements.txt        # Python dependencies
+```
+
+---
+
+## How It Works — Full Pipeline
+
+The project follows a six-step NLP pipeline. Each step transforms the data into a cleaner, more useful form for the machine learning model.
+
+### Step 1 — Data Collection
+
+A dataset of 75 manually written and labelled product reviews was created. The dataset is perfectly balanced with 25 reviews per class (Positive, Negative, Neutral). Balancing is important — if the model saw 60 positive reviews and only 5 negative ones, it would learn to always predict "Positive" just to seem accurate. A balanced dataset forces the model to actually learn the difference between all three classes.
+
+| Review | Label |
+|---|---|
+| "This product is amazing and very useful" | Positive |
+| "Very poor quality and complete waste of money" | Negative |
+| "Product is okay, not bad but not great either" | Neutral |
+
+### Step 2 — Text Preprocessing
+
+Raw text is noisy and inconsistent. Before feeding it to a machine learning model, we clean it through four steps:
+
+- **Lowercase:** "AMAZING" and "amazing" become the same word
+- **Remove punctuation:** symbols and digits are stripped out using regex
+- **Tokenization:** the sentence is split into a list of individual words
+- **Stopword removal:** common words with no sentiment value ("is", "the", "and", "very") are removed using scikit-learn's built-in English stopword list
+
+```
+Input  : "This product is AMAZING and very useful!"
+Step 1 : "this product is amazing and very useful!"   ← lowercase
+Step 2 : "this product is amazing and very useful"    ← remove punctuation
+Step 3 : ["this","product","is","amazing","and","very","useful"]  ← tokenize
+Step 4 : ["product","amazing","useful"]               ← remove stopwords
+Output : "product amazing useful"
+```
+
+### Step 3 — Feature Extraction
+
+Machine learning models cannot understand words — they only work with numbers. We use two different methods to convert cleaned text into numerical vectors:
+
+**Bag of Words (BoW):** Creates a vocabulary of all unique words in the dataset. Each review is then represented as a vector of word counts — how many times each vocabulary word appears in that review. Simple but effective.
+
+**TF-IDF (Term Frequency-Inverse Document Frequency):** A smarter approach. Instead of raw counts, it assigns higher scores to words that are frequent in one specific review but rare across the whole dataset. This means a distinctive word like "amazing" gets a higher score than a generic word like "product" which appears in almost every review.
+
+```python
+# Bag of Words
+bow_vectorizer = CountVectorizer()
+X_train_bow    = bow_vectorizer.fit_transform(X_train)
+
+# TF-IDF
+tfidf_vectorizer = TfidfVectorizer()
+X_train_tfidf    = tfidf_vectorizer.fit_transform(X_train)
+```
+
+### Step 4 — Train / Test Split
+
+The dataset is divided into a training set (70% — 52 reviews) and a test set (30% — 23 reviews). The model only ever sees the training set during learning. The test set is kept completely separate and used only for final evaluation — this gives us an honest measure of how well the model generalises to new data.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+# Training: 52 reviews  |  Testing: 23 reviews
+```
+
+### Step 5 — Model Training (Logistic Regression)
+
+Logistic Regression is used as the classification algorithm. It learns a numerical weight for every word in the vocabulary during training. Words strongly associated with positive sentiment ("amazing", "excellent", "love") get high positive weights. Words associated with negative sentiment ("terrible", "broke", "waste") get high negative weights. For a new review, the model sums up the weighted word scores and predicts whichever class scores highest.
+
+Two separate models are trained — one on BoW features and one on TF-IDF features — so we can compare which feature method works better.
+
+### Step 6 — Evaluation
+
+Models are evaluated using four standard metrics:
+
+| Metric | What it measures |
+|---|---|
+| Accuracy | Overall percentage of correct predictions |
+| Precision | Of all predicted Positives, what % were actually Positive? |
+| Recall | Of all actual Positives, what % did the model correctly find? |
+| F1-Score | Balanced average of Precision and Recall |
+
+---
+
+## Results
+
+| Model | Feature Method | Test Accuracy |
+|---|---|---|
+| Logistic Regression | Bag of Words | ~57% |
+| Logistic Regression | TF-IDF | ~52% |
+
+The BoW model performed better on this dataset. The moderate accuracy is expected — the training set contains only 52 reviews, which is very small by NLP standards. Real-world sentiment analysis models are trained on tens of thousands of examples and typically achieve 85–95% accuracy. All 5 predictions on completely unseen reviews were correct.
+
+---
+
+## Sample Output
+
+```
+===== STEP 5 — MODEL EVALUATION =====
+
+--- Bag-of-Words Model ---
+Accuracy : 57.0%
+
+Classification Report:
+              precision    recall  f1-score   support
+    Negative       0.40      0.57      0.47         7
+     Neutral       0.83      0.62      0.71         8
+    Positive       0.57      0.50      0.53         8
+
+===== STEP 6 — PREDICT NEW REVIEWS =====
+Review                                           Predicted
+---------------------------------------------------------
+This is the best product I have ever bought!    Positive
+Completely useless, broke on the first day      Negative
+It is fine, nothing special about it            Neutral
+Fantastic quality and very fast shipping        Positive
+Disappointed with the overall build quality     Negative
+```
+
+---
+
+## Getting Started
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/sentiment-analysis-nlp.git
+cd sentiment-analysis-nlp
+
+# 2. Install dependencies
+pip install scikit-learn pandas numpy
+
+# 3. Run the full pipeline
+python sentiment_analysis.py
+```
+
+---
+
+## Key Concepts Learned
+
+- What NLP is and why text preprocessing matters before any modelling
+- How tokenization breaks sentences into individual meaningful units
+- Why stopwords are removed and how they reduce noise in the feature space
+- The difference between Bag of Words and TF-IDF and when each is useful
+- How Logistic Regression learns word weights to classify text
+- What Precision, Recall, and F1-Score mean and how to interpret them
+- Why train/test splitting and class balancing are essential for fair evaluation
+
+---
+
+## Future Improvements
+
+- Expand dataset to 1,000+ reviews using real-world data from Amazon or Kaggle
+- Add lemmatization to reduce words to their base form (e.g. "running" → "run")
+- Compare additional classifiers: Naive Bayes, SVM, Random Forest
+- Implement n-gram features (bigrams, trigrams) to capture multi-word phrases
+- Experiment with deep learning: LSTM or BERT-based transformer models
+- Build a simple web interface using Flask or Streamlit for live predictions
+
+---
+
+## Author
+
+Syed Abdul Haseeb — Artifical Intelligence student. This project was developed as part of an Artificial Intelligence and NLP course assignment. Feel free to fork, use, or build on it.
